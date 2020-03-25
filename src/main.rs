@@ -27,14 +27,22 @@ impl App {
         Self::load_css();
         App { window, body }
     }
+
     fn load_css() -> () {
         let provider = CssProvider::new();
-        provider
-            .load_from_path("/home/bender/.config/launcher/style.css")
-            .unwrap_or_else(|err| {
-                eprintln!("Couldn't load CSS, got error: {}", err);
-                eprintln!("Continuing on without CSS");
-            });
+        match provider.load_from_path("/home/bender/.config/launcher/style.css") {
+            Ok(t) => (),
+            Err(e) => {
+                eprintln!("couldn't find ~/.config/launcher.css, using default");
+                match provider.load_from_path("./style.css") {
+                    Ok(t) => (),
+                    Err(e) => {
+                        eprintln!("couldn't find default, err: {}", e);
+                        eprintln!("continuing without css");
+                    }
+                }
+            }
+        }
         StyleContext::add_provider_for_screen(
             &gdk::Screen::get_default().expect("failed to initialize css provider"),
             &provider,

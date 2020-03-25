@@ -1,0 +1,19 @@
+window{
+	font-size:30px;
+}
+grid {
+	font-size:30px;
+	background-color:#1B2B34;
+}
+label {
+	font-size:35;
+	color:white;
+	padding: 5px 10px;
+}
+entry {
+	padding:20px 10px;
+	border:none;
+	border-radius:0;
+	box-shadow:none;
+}
+
