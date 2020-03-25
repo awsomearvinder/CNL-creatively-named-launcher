@@ -1,5 +1,6 @@
 #![feature(vec_remove_item)]
 
+use gtk::LabelExt;
 use gtk::*;
 
 mod lib;
@@ -90,7 +91,9 @@ impl LabelContainer {
     fn new() -> Self {
         let mut labels = vec![];
         for i in 0..5 {
-            labels.push(Label::new(None));
+            let label = Label::new(None);
+            label.set_xalign(0.0);
+            labels.push(label);
         }
         let content_grid = Grid::new();
         for (i, item) in labels.iter().enumerate() {
