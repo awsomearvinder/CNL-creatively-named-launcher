@@ -1,7 +1,5 @@
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
-use std::cell;
-use std::rc;
 
 mod bin;
 pub fn sorted_bins(search: &str) -> Vec<bin::Bin> {

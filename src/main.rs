@@ -1,9 +1,16 @@
 #![feature(vec_remove_item)]
-
+#![allow(dead_code)]
 use gtk::LabelExt;
 use gtk::*;
 
 mod lib;
+
+const NUM_LABELS: i32 = 5;
+
+//note: this will always be atleast as big as the minimum required space to fit
+//everything on screen.
+const WIDTH: i32 = 700;
+const HEIGHT: i32 = 0;
 
 /*Structure of app:
  * App -
@@ -11,7 +18,6 @@ mod lib;
  *        -Entry
  *        -collection of labels
 */
-
 struct App {
     window: Window,
     body: Body,
@@ -21,21 +27,25 @@ impl App {
     fn new() -> Self {
         let window = Window::new(WindowType::Toplevel);
         let body = Body::new();
-        window.set_default_size(700, 350);
+        window.set_default_size(WIDTH, HEIGHT);
         window.set_decorated(false);
         window.add(&body.content_grid);
         Self::load_css();
         App { window, body }
     }
 
+    //TODO: switch to xdg crate V this is gross.
     fn load_css() -> () {
         let provider = CssProvider::new();
         match provider.load_from_path("/home/bender/.config/launcher/style.css") {
-            Ok(t) => (),
+            Ok(_) => (),
             Err(e) => {
-                eprintln!("couldn't find ~/.config/launcher.css, using default");
+                eprintln!(
+                    "couldn't find ~/.config/launcher.css, using default, error for debug:{}",
+                    e
+                );
                 match provider.load_from_path("./style.css") {
-                    Ok(t) => (),
+                    Ok(_) => (),
                     Err(e) => {
                         eprintln!("couldn't find default, err: {}", e);
                         eprintln!("continuing without css");
@@ -98,7 +108,7 @@ struct LabelContainer {
 impl LabelContainer {
     fn new() -> Self {
         let mut labels = vec![];
-        for i in 0..5 {
+        for _ in 0..NUM_LABELS {
             let label = Label::new(None);
             label.set_xalign(0.0);
             labels.push(label);
