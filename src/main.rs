@@ -21,6 +21,7 @@ const HEIGHT: i32 = 0;
  *        -Entry
  *        -collection of labels
 */
+#[derive(Debug)]
 struct App {
     window: Window,
     body: Body,
@@ -36,7 +37,6 @@ impl App {
         Self::load_css();
         App { window, body }
     }
-
     fn load_css() -> () {
         let provider = CssProvider::new();
         let xdg_base = match xdg::BaseDirectories::with_prefix("launcher") {
@@ -80,6 +80,7 @@ impl App {
     }
 }
 
+#[derive(Debug)]
 struct Body {
     input: Entry,
     labels: LabelContainer,
