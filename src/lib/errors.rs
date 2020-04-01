@@ -4,7 +4,6 @@ pub enum Errors {
     IoError(io::Error),
     BadName,
     BadExec,
-    EmptyFile,
 }
 
 impl fmt::Display for Errors {
@@ -13,7 +12,6 @@ impl fmt::Display for Errors {
             Self::IoError(err) => err.fmt(f),
             Self::BadName => write!(f, "Bad or no Name in .desktop file"),
             Self::BadExec => write!(f, "Bad or no Exec in .desktop file"),
-            Self::EmptyFile => write!(f, "Empty file contents."),
         }
     }
 }
@@ -29,7 +27,6 @@ impl std::error::Error for Errors {
         match self {
             Self::BadName => None,
             Self::BadExec => None,
-            Self::EmptyFile => None,
             Self::IoError(err) => Some(err),
         }
     }

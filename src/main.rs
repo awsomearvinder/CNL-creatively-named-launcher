@@ -1,7 +1,10 @@
 #![feature(vec_remove_item)]
 #![allow(dead_code)]
+use gio;
 use gtk::LabelExt;
 use gtk::*;
+use std::{path, process};
+use xdg;
 
 mod lib;
 
@@ -34,14 +37,30 @@ impl App {
         App { window, body }
     }
 
-    //TODO: switch to xdg crate V this is gross.
     fn load_css() -> () {
         let provider = CssProvider::new();
-        match provider.load_from_path("/home/bender/.config/launcher/style.css") {
+        let xdg_base = match xdg::BaseDirectories::with_prefix("launcher") {
+            Ok(base) => base,
+            Err(e) => {
+                eprintln!(
+                    "got err, {} Does your system support XDG spec? aborting process.",
+                    e
+                );
+                process::exit(1);
+            }
+        };
+        let css_sheet = match xdg_base.find_config_file("style.css") {
+            Some(file_path) => dbg!(file_path),
+            None => {
+                eprintln!("couldn't find css sheet, assuming .config");
+                path::PathBuf::from("~/.config/launcher/style.css")
+            }
+        };
+        match provider.load_from_file(&gio::File::new_for_path(&css_sheet)) {
             Ok(_) => (),
             Err(e) => {
                 eprintln!(
-                    "couldn't find ~/.config/launcher.css, using default, error for debug:{}",
+                    "couldn't find launcher.css, using default, error for debug:{}",
                     e
                 );
                 match provider.load_from_path("./style.css") {

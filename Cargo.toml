@@ -11,3 +11,4 @@ gtk = {version = "0.8.1", features = ["v3_16"]}
 gdk = "0.12.1"
 fuzzy-matcher = "0.3.4"
 xdg = "2.2.0"
+gio = "0.8.1"

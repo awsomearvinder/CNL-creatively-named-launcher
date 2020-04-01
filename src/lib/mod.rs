@@ -18,11 +18,9 @@ impl Searcher {
         let mut bins = self.bins.clone();
         bins.sort_by_cached_key(|bin| {
             let score = matcher.fuzzy_match(bin.name(), search);
-            if score.is_none() {
+            if score.is_none() || score.unwrap() < 30 {
                 bad_vals.push(bin.clone());
-            } else if score.unwrap() < 30 {
-                bad_vals.push(bin.clone());
-            };
+            }
             //this makes all scores negative, in order to make the highest score lowest,
             //and lowest score highest. This is done because sort_by_cached_key sorts the
             //smallest number as highest sort val, and fuzzy match gives lowest score

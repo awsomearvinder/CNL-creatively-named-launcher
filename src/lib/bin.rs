@@ -1,4 +1,4 @@
-use std::{fs, io, path};
+use std::{fs, path, process};
 use xdg;
 
 use crate::lib::errors::Errors;
@@ -31,7 +31,13 @@ impl Bin {
 }
 
 pub fn get_bins() -> Vec<Bin> {
-    let base_dirs = xdg::BaseDirectories::new().unwrap();
+    let base_dirs = xdg::BaseDirectories::new().unwrap_or_else(|e| {
+        eprintln!(
+            "This system does not follow XDG spec, aborting, error code for debug:{}",
+            e
+        );
+        process::exit(1);
+    });
     let paths = base_dirs.get_data_dirs();
     let mut bins = vec![];
     bins.extend(search_dirs_with_appended_name(paths.clone(), "applications").into_iter());
@@ -83,7 +89,6 @@ fn parse_desktop_file_for_bin(path: &path::PathBuf) -> std::result::Result<Bin, 
     let desktop_file_contents = fs::read_to_string(path)?;
     let desktop_file_contents = desktop_file_contents.split("\n");
     for key_val in desktop_file_contents {
-        eprintln!("{}", &key_val);
         if key_val.split("=").nth(0) == Some("Name") {
             let name = match key_val.split("=").nth(1) {
                 Some(val) => val,
