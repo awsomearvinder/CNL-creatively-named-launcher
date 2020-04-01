@@ -73,12 +73,13 @@ impl Body {
         let labels = LabelContainer::new();
         let cloned_labels = labels.clone();
         //whenever input is populated, a new search through bins is performed.
+        let searcher = lib::Searcher::new();
         input.connect_changed(move |input| {
             let input = match input.get_text() {
                 Some(gstring) => gstring.as_str().to_owned(),
                 None => "".to_owned(),
             };
-            let bins = lib::sorted_bins(&input);
+            let bins = searcher.sorted_bins(&input);
             for (i, label) in cloned_labels.labels.iter().enumerate() {
                 if input != "" && i < bins.len() {
                     label.set_text(bins[i].name());
