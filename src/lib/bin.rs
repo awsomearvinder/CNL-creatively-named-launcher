@@ -47,9 +47,9 @@ pub fn get_bins() -> Vec<Bin> {
 
 fn search_dirs_with_appended_name(paths: Vec<path::PathBuf>, name: &str) -> Vec<Bin> {
     let mut bins = vec![];
-    eprintln!("{:?}", &paths);
     for mut path in paths.into_iter() {
         path.push(path::Path::new(name));
+        eprintln!("{:?}", &path);
         let dir_entries = match fs::read_dir(path) {
             Ok(entries) => entries,
             Err(e) => {
@@ -67,13 +67,14 @@ fn search_dirs_with_appended_name(paths: Vec<path::PathBuf>, name: &str) -> Vec<
             match item.metadata() {
                 Ok(metadata) => {
                     if metadata.is_file() {
-                        bins.push(match parse_desktop_file_for_bin(&item.path()) {
+                        let bin = match parse_desktop_file_for_bin(&item.path()) {
                             Ok(bin) => bin,
                             Err(e) => {
                                 eprintln!("{}, skipping file", e);
                                 continue;
                             }
-                        });
+                        };
+                        bins.push(bin);
                     }
                 }
                 Err(_) => {
