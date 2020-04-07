@@ -53,7 +53,7 @@ impl App {
             Some(file_path) => dbg!(file_path),
             None => {
                 eprintln!("couldn't find css sheet, assuming .config");
-                path::PathBuf::from("~/.config/launcher/style.css")
+                path::PathBuf::from("$HOME/config/launcher/style.css")
             }
         };
         match provider.load_from_file(&gio::File::new_for_path(&css_sheet)) {
