@@ -3,7 +3,7 @@
 use gio;
 use gtk::LabelExt;
 use gtk::*;
-use std::{path, process};
+use std::{cell, path, process, rc};
 use xdg;
 
 mod lib;
@@ -94,19 +94,24 @@ impl Body {
         let cloned_labels = labels.clone();
         //whenever input is populated, a new search through bins is performed.
         let searcher = lib::Searcher::new();
+        let bins = rc::Rc::new(cell::RefCell::new(Vec::new()));
+        let bins_ref = bins.clone();
         input.connect_changed(move |input| {
             let input = match input.get_text() {
                 Some(gstring) => gstring.as_str().to_owned(),
                 None => "".to_owned(),
             };
-            let bins = searcher.sorted_bins(&input);
+            *bins_ref.borrow_mut() = searcher.sorted_bins(&input);
             for (i, label) in cloned_labels.labels.iter().enumerate() {
-                if input != "" && i < bins.len() {
-                    label.set_text(bins[i].name());
+                if input != "" && i < bins_ref.borrow().len() {
+                    label.set_text(bins_ref.borrow()[i].name());
                 } else {
                     label.set_text("");
                 }
             }
+        });
+        input.connect_activate(move |input| {
+            let bin = bins.borrow()[0].clone().exec();
         });
         let content_grid = Grid::new();
         content_grid.set_column_homogeneous(true);

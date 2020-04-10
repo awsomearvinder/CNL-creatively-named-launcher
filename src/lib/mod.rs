@@ -2,7 +2,7 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 
 mod bin;
-mod errors;
+pub mod errors;
 pub struct Searcher {
     bins: Vec<bin::Bin>,
 }

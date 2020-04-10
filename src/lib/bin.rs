@@ -1,25 +1,26 @@
-use std::{fs, path, process};
-use xdg;
-
 use crate::lib::errors::Errors;
-
+use std::{fs, path, process};
 #[derive(Eq, Hash, Debug, Clone, PartialEq)]
 pub struct Bin {
     filepath: String,
     name: String,
+    exec: String,
 }
 
 impl Bin {
     pub fn from_only_filepath(filepath: &str) -> Self {
+        let name = filepath.split("/").last().unwrap().into();
         Bin {
             filepath: filepath.into(),
-            name: filepath.split("/").last().unwrap().into(),
+            name,
+            exec: filepath.into(),
         }
     }
-    pub fn new(filepath: &str, name: &str) -> Self {
+    pub fn new(filepath: &str, name: &str, exec: &str) -> Self {
         Bin {
             filepath: filepath.into(),
             name: name.into(),
+            exec: exec.into(),
         }
     }
     pub fn filepath(&self) -> &str {
@@ -27,6 +28,11 @@ impl Bin {
     }
     pub fn name(&self) -> &str {
         &self.name
+    }
+    pub fn exec(&self) -> Result<process::Output, Errors> {
+        Ok(process::Command::new("sh")
+            .args(&["-c", &self.exec])
+            .output()?)
     }
 }
 
@@ -62,23 +68,23 @@ fn search_dirs_with_appended_name(paths: Vec<path::PathBuf>, name: &str) -> Vec<
             //item at this point in time is either a file, directory, or a symlink.
             let item = match item {
                 Ok(item) => item,
-                Err(_) => continue,
-            };
-            match item.metadata() {
-                Ok(metadata) => {
-                    if metadata.is_file() {
-                        let bin = match parse_desktop_file_for_bin(&item.path()) {
-                            Ok(bin) => bin,
-                            Err(e) => {
-                                eprintln!("{}, skipping file", e);
-                                continue;
-                            }
-                        };
-                        bins.push(bin);
-                    }
+                Err(e) => {
+                    eprintln!("got err, {:?}", e);
+                    continue;
                 }
-                Err(_) => {
-                    eprintln!("found symlink, not traversing.");
+            };
+            if let Ok(filetype) = item.file_type() {
+                if filetype.is_file()
+                    || filetype.is_symlink() && fs::metadata(item.path()).unwrap().is_file()
+                {
+                    let bin = match parse_desktop_file_for_bin(&item.path()) {
+                        Ok(bin) => bin,
+                        Err(e) => {
+                            eprintln!("{}, skipping file", e);
+                            continue;
+                        }
+                    };
+                    bins.push(bin);
                 }
             }
         }
@@ -89,14 +95,35 @@ fn search_dirs_with_appended_name(paths: Vec<path::PathBuf>, name: &str) -> Vec<
 fn parse_desktop_file_for_bin(path: &path::PathBuf) -> std::result::Result<Bin, Errors> {
     let desktop_file_contents = fs::read_to_string(path)?;
     let desktop_file_contents = desktop_file_contents.split("\n");
+    let mut name = None;
+    let mut exec = None;
     for key_val in desktop_file_contents {
-        if key_val.split("=").nth(0) == Some("Name") {
-            let name = match key_val.split("=").nth(1) {
-                Some(val) => val,
-                None => return Err(Errors::BadName),
-            };
-            return Ok(Bin::new(&path.to_str().unwrap(), name));
+        if key_val.split("=").nth(0) == Some("Name") && name == None {
+            name = key_val.split("=").nth(1);
+        }
+        if key_val.split("=").nth(0) == Some("Exec") && exec == None {
+            let mut buf = String::new();
+            let mut found_equal = false;
+            key_val.chars().for_each(|c| {
+                if found_equal {
+                    buf.push(c);
+                }
+                if c == '=' {
+                    found_equal = true
+                }
+            });
+            exec = Some(buf);
         }
     }
-    Err(Errors::BadName)
+    if name == None {
+        return Err(Errors::BadName);
+    }
+    if exec == None {
+        return Err(Errors::BadExec);
+    }
+    Ok(Bin::new(
+        &path.clone().into_os_string().into_string()?,
+        &name.unwrap(),
+        &exec.unwrap(),
+    ))
 }
