@@ -1,4 +1,5 @@
 #![feature(vec_remove_item)]
+#![feature(bool_to_option)]
 #![allow(dead_code)]
 use gio;
 use gtk::LabelExt;
@@ -9,18 +10,11 @@ use xdg;
 mod lib;
 
 const NUM_LABELS: i32 = 5;
-
 //note: this will always be atleast as big as the minimum required space to fit
 //everything on screen.
 const WIDTH: i32 = 700;
 const HEIGHT: i32 = 0;
 
-/*Structure of app:
- * App -
- *    Body
- *        -Entry
- *        -collection of labels
-*/
 #[derive(Debug)]
 struct App {
     window: Window,
@@ -39,39 +33,26 @@ impl App {
     }
     fn load_css() -> () {
         let provider = CssProvider::new();
-        let xdg_base = match xdg::BaseDirectories::with_prefix("launcher") {
-            Ok(base) => base,
-            Err(e) => {
-                eprintln!(
-                    "got err, {} Does your system support XDG spec? aborting process.",
-                    e
-                );
-                process::exit(1);
-            }
-        };
-        let css_sheet = match xdg_base.find_config_file("style.css") {
-            Some(file_path) => dbg!(file_path),
-            None => {
-                eprintln!("couldn't find css sheet, assuming .config");
-                path::PathBuf::from("$HOME/config/launcher/style.css")
-            }
-        };
-        match provider.load_from_file(&gio::File::new_for_path(&css_sheet)) {
-            Ok(_) => (),
-            Err(e) => {
-                eprintln!(
-                    "couldn't find launcher.css, using default, error for debug:{}",
-                    e
-                );
-                match provider.load_from_path("./style.css") {
-                    Ok(_) => (),
-                    Err(e) => {
-                        eprintln!("couldn't find default, err: {}", e);
-                        eprintln!("continuing without css");
-                    }
-                }
-            }
-        }
+        let xdg_base = xdg::BaseDirectories::with_prefix("launcher").unwrap_or_else(|err| {
+            eprintln!(
+                "got err, {} Does your system support XDG spec? aborting process.",
+                err
+            );
+            process::exit(1);
+        });
+        let css_sheet = xdg_base.find_config_file("style.css").unwrap_or_else(|| {
+            eprintln!("couldn't find css sheet, assuming .config");
+            path::PathBuf::from("$HOME/config/launcher/style.css")
+        });
+        provider
+            .load_from_file(&gio::File::new_for_path(&css_sheet))
+            .unwrap_or_else(|e| {
+                eprintln!("couldn't find launcher.css, using default, err:{}", e);
+                provider.load_from_path("./style.css").unwrap_or_else(|e| {
+                    eprintln!("couldn't find default, err: {}", e);
+                    eprintln!("continuing without css");
+                })
+            });
         StyleContext::add_provider_for_screen(
             &gdk::Screen::get_default().expect("failed to initialize css provider"),
             &provider,
@@ -83,14 +64,14 @@ impl App {
 #[derive(Debug)]
 struct Body {
     input: Entry,
-    labels: LabelContainer,
+    labels: rc::Rc<LabelContainer>,
     content_grid: Grid,
 }
 
 impl Body {
     fn new() -> Self {
         let input = Entry::new();
-        let labels = LabelContainer::new();
+        let labels = rc::Rc::new(LabelContainer::new());
         let cloned_labels = labels.clone();
         //whenever input is populated, a new search through bins is performed.
         let searcher = lib::Searcher::new();
@@ -110,8 +91,14 @@ impl Body {
                 }
             }
         });
-        input.connect_activate(move |input| {
-            let bin = bins.borrow()[0].clone().exec();
+        input.connect_activate(move |_input| {
+            let bin_code = bins.borrow()[0].clone().exec();
+            eprintln!("{:?}", &bin_code);
+            bin_code.is_ok().then(|| {
+                std::thread::sleep(std::time::Duration::new(0, 500_000_000));
+                process::exit(0)
+            });
+            bin_code.is_err().then(|| process::exit(1));
         });
         let content_grid = Grid::new();
         content_grid.set_column_homogeneous(true);

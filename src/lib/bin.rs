@@ -29,10 +29,10 @@ impl Bin {
     pub fn name(&self) -> &str {
         &self.name
     }
-    pub fn exec(&self) -> Result<process::Output, Errors> {
+    pub fn exec(&self) -> Result<process::Child, Errors> {
         Ok(process::Command::new("sh")
             .args(&["-c", &self.exec])
-            .output()?)
+            .spawn()?)
     }
 }
 
@@ -47,7 +47,7 @@ pub fn get_bins() -> Vec<Bin> {
     let paths = base_dirs.get_data_dirs();
     let mut bins = vec![];
     bins.extend(search_dirs_with_appended_name(paths.clone(), "applications").into_iter());
-    bins.extend(search_dirs_with_appended_name(paths.clone(), "desktop-directories").into_iter());
+    bins.extend(search_dirs_with_appended_name(paths, "desktop-directories").into_iter());
     bins
 }
 
@@ -59,33 +59,27 @@ fn search_dirs_with_appended_name(paths: Vec<path::PathBuf>, name: &str) -> Vec<
         let dir_entries = match fs::read_dir(path) {
             Ok(entries) => entries,
             Err(e) => {
-                eprintln!("got err, {:?}, skipping", e);
+                eprintln!("got err, {}, skipping", e);
                 continue;
             }
         };
         for item in dir_entries {
-            //unwrap the item in the dir, otherwise continue.
-            //item at this point in time is either a file, directory, or a symlink.
             let item = match item {
                 Ok(item) => item,
                 Err(e) => {
-                    eprintln!("got err, {:?}", e);
+                    eprintln!("got err, {}", e);
                     continue;
                 }
             };
-            if let Ok(filetype) = item.file_type() {
-                if filetype.is_file()
-                    || filetype.is_symlink() && fs::metadata(item.path()).unwrap().is_file()
-                {
-                    let bin = match parse_desktop_file_for_bin(&item.path()) {
-                        Ok(bin) => bin,
-                        Err(e) => {
-                            eprintln!("{}, skipping file", e);
-                            continue;
-                        }
-                    };
-                    bins.push(bin);
-                }
+            if fs::metadata(item.path()).unwrap().is_file() {
+                let bin = match parse_desktop_file_for_bin(&item.path()) {
+                    Ok(bin) => bin,
+                    Err(e) => {
+                        eprintln!("got err, {}, skipping file", e);
+                        continue;
+                    }
+                };
+                bins.push(bin);
             }
         }
     }
@@ -104,26 +98,20 @@ fn parse_desktop_file_for_bin(path: &path::PathBuf) -> std::result::Result<Bin, 
         if key_val.split("=").nth(0) == Some("Exec") && exec == None {
             let mut buf = String::new();
             let mut found_equal = false;
-            key_val.chars().for_each(|c| {
+            for c in key_val.chars() {
                 if found_equal {
                     buf.push(c);
                 }
                 if c == '=' {
                     found_equal = true
                 }
-            });
+            }
             exec = Some(buf);
         }
     }
-    if name == None {
-        return Err(Errors::BadName);
-    }
-    if exec == None {
-        return Err(Errors::BadExec);
-    }
     Ok(Bin::new(
         &path.clone().into_os_string().into_string()?,
-        &name.unwrap(),
-        &exec.unwrap(),
+        &name.ok_or(Errors::BadName)?,
+        &exec.ok_or(Errors::BadExec)?,
     ))
 }
