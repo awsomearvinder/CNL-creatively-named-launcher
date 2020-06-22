@@ -30,9 +30,17 @@ impl Bin {
         &self.name
     }
     pub fn exec(&self) -> Result<process::Child, Errors> {
-        Ok(process::Command::new("sh")
+        let output = Ok(process::Command::new("sh")
             .args(&["-c", &self.exec])
-            .spawn()?)
+            .spawn()?);
+
+        //dirty hack to make apps that have a startup time of some sort run.
+        std::thread::sleep(std::time::Duration::new(0, 500_000_000));
+
+        output
+    }
+    pub fn exec_cmd(&self) -> &str {
+        &self.exec
     }
 }
 

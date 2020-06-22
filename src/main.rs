@@ -22,9 +22,9 @@ struct App {
 }
 
 impl App {
-    fn new() -> Self {
+    fn new(is_embed: bool) -> Self {
         let window = Window::new(WindowType::Toplevel);
-        let body = Body::new();
+        let body = Body::new(is_embed);
         window.set_default_size(WIDTH, HEIGHT);
         window.set_decorated(false);
         window.add(&body.content_grid);
@@ -42,7 +42,7 @@ impl App {
         });
         let css_sheet = xdg_base.find_config_file("style.css").unwrap_or_else(|| {
             eprintln!("couldn't find css sheet, assuming .config");
-            path::PathBuf::from("$HOME/config/launcher/style.css")
+            path::PathBuf::from("$HOME/.config/launcher/style.css")
         });
         provider
             .load_from_file(&gio::File::new_for_path(&css_sheet))
@@ -69,7 +69,7 @@ struct Body {
 }
 
 impl Body {
-    fn new() -> Self {
+    fn new(is_embed: bool) -> Self {
         let input = Entry::new();
         let labels = rc::Rc::new(LabelContainer::new());
         let cloned_labels = labels.clone();
@@ -92,13 +92,13 @@ impl Body {
             }
         });
         input.connect_activate(move |_input| {
-            let bin_code = bins.borrow()[0].clone().exec();
-            eprintln!("{:?}", &bin_code);
-            bin_code.is_ok().then(|| {
-                std::thread::sleep(std::time::Duration::new(0, 500_000_000));
-                process::exit(0)
-            });
-            bin_code.is_err().then(|| process::exit(1));
+            //Run the binary
+            if !is_embed {
+                bins.borrow()[0].clone().exec().unwrap();
+            } else {
+                println!("{}", bins.borrow()[0].clone().exec_cmd())
+            }
+            process::exit(0);
         });
         let content_grid = Grid::new();
         content_grid.set_column_homogeneous(true);
@@ -142,8 +142,8 @@ fn main() {
         eprintln!("failed to initialize gtk");
         std::process::exit(1);
     });
-    let app = App::new();
+    let is_embed = std::env::args().into_iter().any(|x| &x == "--embed");
+    let app = App::new(is_embed);
     app.window.show_all();
-    println!("Hello, world!");
     gtk::main();
 }
