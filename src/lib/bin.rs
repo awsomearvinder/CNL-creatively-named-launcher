@@ -114,7 +114,18 @@ fn parse_desktop_file_for_bin(path: &path::PathBuf) -> std::result::Result<Bin, 
                     found_equal = true
                 }
             }
-            exec = Some(buf);
+            exec = Some(
+                buf.split(' ')
+                    .filter(|word| {
+                        ![
+                            "%f", "%F", "%u", "%U", "%d", "%D", "%n", "%N", "%i", "%c", "%k", "%v",
+                            "%m",
+                        ]
+                        .iter()
+                        .any(|item| item == word)
+                    })
+                    .collect::<String>(),
+            );
         }
     }
     Ok(Bin::new(
