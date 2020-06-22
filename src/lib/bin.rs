@@ -124,6 +124,11 @@ fn parse_desktop_file_for_bin(path: &path::PathBuf) -> std::result::Result<Bin, 
                         .iter()
                         .any(|item| item == word)
                     })
+                    .map(|x| {
+                        let mut x = x.to_string();
+                        x.push(' ');
+                        x
+                    })
                     .collect::<String>(),
             );
         }
