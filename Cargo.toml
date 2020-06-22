@@ -12,3 +12,14 @@ gdk = "0.12.1"
 fuzzy-matcher = "0.3.4"
 xdg = "2.2.0"
 gio = "0.8.1"
+
+
+[lib]
+name = "launcher_lib"
+path = "src/lib/mod.rs"
+test = true
+crate-type=["lib"]
+
+
+[[bin]]
+name = "launcher"

@@ -1,4 +1,4 @@
-use crate::lib::errors::Errors;
+use crate::errors::Errors;
 use std::{fs, path, process};
 #[derive(Eq, Hash, Debug, Clone, PartialEq)]
 pub struct Bin {

@@ -3,33 +3,31 @@ use fuzzy_matcher::FuzzyMatcher;
 
 mod bin;
 pub mod errors;
+
 pub struct Searcher {
     bins: Vec<bin::Bin>,
 }
+
 impl Searcher {
     pub fn new() -> Self {
         Self {
             bins: bin::get_bins(),
         }
     }
-    pub fn sorted_bins(&self, search: &str) -> Vec<bin::Bin> {
-        let matcher = SkimMatcherV2::default();
-        let mut bad_vals = Vec::new();
-        let mut bins = self.bins.clone();
-        bins.sort_by_cached_key(|bin| {
-            let score = matcher.fuzzy_match(bin.name(), search);
-            if score.is_none() || score.unwrap() < 30 {
-                bad_vals.push(bin.clone());
+
+    pub fn sorted_bins(&self, search: &str) -> Vec<&bin::Bin> {
+        let matcher = SkimMatcherV2::default().smart_case().use_cache(true);
+
+        let mut bins = Vec::new();
+        for i in &self.bins {
+            if matcher.fuzzy_match(i.name(), search).unwrap_or(0) > 30 {
+                bins.push(i);
             }
-            //this makes all scores negative, in order to make the highest score lowest,
-            //and lowest score highest. This is done because sort_by_cached_key sorts the
-            //smallest number as highest sort val, and fuzzy match gives lowest score
-            //to least likely.
-            score.unwrap_or(100_000_000) * -1
-        });
-        for item in bad_vals.iter() {
-            bins.remove_item(item);
         }
+
+        //we multiply by -1 because sort() gives smaller values higher positions.
+        bins.sort_by_cached_key(|bin| -1 * matcher.fuzzy_match(bin.name(), search).unwrap());
+
         bins
     }
 }
