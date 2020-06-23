@@ -1,7 +1,7 @@
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 
-mod bin;
+pub mod bin;
 pub mod errors;
 
 pub struct Searcher {
