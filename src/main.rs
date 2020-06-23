@@ -6,6 +6,5 @@ fn main() {
         eprintln!("failed to initialize gtk");
         std::process::exit(1);
     });
-    let is_embed = std::env::args().into_iter().any(|x| &x == "--embed");
     app::execute();
 }

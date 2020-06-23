@@ -71,7 +71,14 @@ impl Update for Win {
             }
             Msg::Quit => std::process::exit(0),
             Msg::Enter => {
-                println!("{}", self.model.bins[0].exec_cmd());
+                let is_embed = std::env::args().into_iter().any(|x| &x == "--embed");
+                if is_embed {
+                    println!("{}", self.model.bins[0].exec_cmd());
+                } else {
+                    self.model.bins[0].exec().unwrap();
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    std::process::exit(0);
+                }
             }
         }
     }
@@ -135,7 +142,7 @@ impl Widget for Win {
     }
 }
 
-//Filesystems are arcane beauty
+//Filesystems are an arcane beauty
 ///This loads CSS for GTK
 fn load_css() -> () {
     let provider = CssProvider::new();
