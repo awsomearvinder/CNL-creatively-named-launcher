@@ -77,8 +77,8 @@ impl Update for Win {
                 } else {
                     self.model.bins[0].exec().unwrap();
                     std::thread::sleep(std::time::Duration::from_millis(500));
-                    std::process::exit(0);
                 }
+                std::process::exit(0);
             }
         }
     }
