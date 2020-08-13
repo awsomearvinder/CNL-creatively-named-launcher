@@ -6,8 +6,6 @@ use std::{path, process};
 use launcher_lib as lib;
 const NUM_LABELS: usize = 5;
 
-//note: this will always be atleast as big as the minimum required space to fit
-//everything on screen.
 const WIDTH: i32 = 700;
 const HEIGHT: i32 = 0;
 
@@ -60,7 +58,14 @@ impl Update for Win {
                 model.bins = searcher.sorted_bins(&c).into_iter().cloned().collect();
                 let mut output_values = self.model.bins.iter().map(|x| x.name().to_owned());
                 for label in &mut self.widgets.labels {
-                    label.set_text(&output_values.next().unwrap_or_else(|| "".into()))
+                    let value = output_values.next().unwrap_or_else(|| "".into());
+                    label.set_text(&{
+                        if value.len() > 35 {
+                            value[0..35].to_owned() + "..."
+                        } else {
+                            value
+                        }
+                    })
                 }
             }
             Msg::Quit => std::process::exit(0),
