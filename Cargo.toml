@@ -14,7 +14,9 @@ fuzzy-matcher = "0.3.4"
 xdg = "2.2.0"
 gio = "0.8.1"
 gdk = "0.12.1"
-
+toml = "0.5.6"
+serde = { version = "1.0", features = ["derive"] }
+nom = "5.1.2"
 
 [lib]
 name = "launcher_lib"

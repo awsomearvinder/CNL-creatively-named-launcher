@@ -9,7 +9,7 @@ pub struct Bin {
 
 impl Bin {
     pub fn from_only_filepath(filepath: &str) -> Self {
-        let name = filepath.split("/").last().unwrap().into();
+        let name = filepath.split('/').last().unwrap().into();
         Bin {
             filepath: filepath.into(),
             name,
@@ -94,43 +94,55 @@ fn search_dirs_with_appended_name(paths: Vec<path::PathBuf>, name: &str) -> Vec<
     bins
 }
 
+//I should really make an actual parser instead of this fucking mess.
+//I'm sorry whoever reads this.
+//Please fix me one day.
+//This is painful.
+//Just make a dedicated parser please for the love of god.
 fn parse_desktop_file_for_bin(path: &path::PathBuf) -> std::result::Result<Bin, Errors> {
     let desktop_file_contents = fs::read_to_string(path)?;
-    let desktop_file_contents = desktop_file_contents.split("\n");
+    let (remaining, _) = nom::bytes::complete::take_until::<_, _, ()>("[Desktop Entry]")(
+        desktop_file_contents.as_str(),
+    )
+    .map_err(|_| Errors::BadName)?;
+    let (remaining, _) =
+        nom::bytes::complete::tag::<_, _, ()>("[Desktop Entry]")(remaining).unwrap();
+    let (_, contents) = nom::bytes::complete::take_until::<_, _, (&str, nom::error::ErrorKind)>(
+        "[Desktop",
+    )(remaining)
+    .unwrap_or_else(|e| match e {
+        nom::Err::Error((all, _)) => ("", all),
+        _ => unreachable!(),
+    });
     let mut name = None;
     let mut exec = None;
-    for key_val in desktop_file_contents {
-        if key_val.split("=").nth(0) == Some("Name") && name == None {
-            name = key_val.split("=").nth(1);
+    for line in contents.split('\n') {
+        let (remaining, key) = match nom::bytes::complete::take_until::<_, _, ()>("=")(line) {
+            Ok((k, v)) => (k, v),
+            _ => continue,
+        };
+        let (value, _) = match nom::bytes::complete::tag::<_, _, ()>("=")(remaining)
+            .map_err(|_| Errors::BadName)
+        {
+            Ok(v) => v,
+            _ => continue,
+        };
+        if key.trim() == "Name" {
+            name = Some(value);
         }
-        if key_val.split("=").nth(0) == Some("Exec") && exec == None {
-            let mut buf = String::new();
-            let mut found_equal = false;
-            for c in key_val.chars() {
-                if found_equal {
-                    buf.push(c);
-                }
-                if c == '=' {
-                    found_equal = true
-                }
-            }
-            exec = Some(
-                buf.split(' ')
-                    .filter(|word| {
-                        ![
-                            "%f", "%F", "%u", "%U", "%d", "%D", "%n", "%N", "%i", "%c", "%k", "%v",
-                            "%m",
-                        ]
-                        .iter()
-                        .any(|item| item == word)
-                    })
-                    .map(|x| {
-                        let mut x = x.to_string();
-                        x.push(' ');
-                        x
-                    })
-                    .collect::<String>(),
-            );
+        if key.trim() == "Exec" {
+            let value = value
+                .split(' ')
+                .filter(|c| {
+                    ![
+                        "%f", "%F", "%u", "%U", "%d", "%D", "%n", "%N", "%i", "%c", "%k", "%v",
+                        "%m",
+                    ]
+                    .iter()
+                    .any(|item| c == item)
+                })
+                .collect::<String>();
+            exec = Some(value);
         }
     }
     Ok(Bin::new(

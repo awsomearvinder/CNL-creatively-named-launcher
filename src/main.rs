@@ -1,5 +1,3 @@
-use gtk::*;
-
 mod app;
 fn main() {
     gtk::init().unwrap_or_else(|_err| {

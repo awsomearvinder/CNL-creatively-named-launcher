@@ -2,10 +2,8 @@ use gtk::*;
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 use std::{path, process};
-use xdg;
 
 use launcher_lib as lib;
-
 const NUM_LABELS: usize = 5;
 
 //note: this will always be atleast as big as the minimum required space to fit
@@ -59,14 +57,10 @@ impl Update for Win {
             Msg::UpdatedInput(c) => {
                 let model = &mut self.model;
                 let searcher = &model.searcher;
-                model.bins = searcher
-                    .sorted_bins(&c)
-                    .into_iter()
-                    .map(|x| x.clone())
-                    .collect();
+                model.bins = searcher.sorted_bins(&c).into_iter().cloned().collect();
                 let mut output_values = self.model.bins.iter().map(|x| x.name().to_owned());
                 for label in &mut self.widgets.labels {
-                    label.set_text(&output_values.next().unwrap_or("".into()))
+                    label.set_text(&output_values.next().unwrap_or_else(|| "".into()))
                 }
             }
             Msg::Quit => std::process::exit(0),
@@ -76,6 +70,7 @@ impl Update for Win {
                     println!("{}", self.model.bins[0].exec_cmd());
                 } else {
                     self.model.bins[0].exec().unwrap();
+                    self.widgets.window.hide();
                     std::thread::sleep(std::time::Duration::from_millis(500));
                 }
                 std::process::exit(0);
@@ -109,6 +104,7 @@ impl Widget for Win {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
         window.add(&vbox);
         window.set_default_size(WIDTH, HEIGHT);
+        window.set_resizable(false);
         window.show_all();
 
         connect!(
@@ -144,7 +140,7 @@ impl Widget for Win {
 
 //Filesystems are an arcane beauty
 ///This loads CSS for GTK
-fn load_css() -> () {
+fn load_css() {
     let provider = CssProvider::new();
     let xdg_base = xdg::BaseDirectories::with_prefix("launcher").unwrap_or_else(|err| {
         eprintln!(

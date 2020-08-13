@@ -8,6 +8,12 @@ pub struct Searcher {
     bins: Vec<bin::Bin>,
 }
 
+impl Default for Searcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Searcher {
     pub fn new() -> Self {
         Self {
@@ -25,8 +31,8 @@ impl Searcher {
             }
         }
 
-        //we multiply by -1 because sort() gives smaller values higher positions.
-        bins.sort_by_cached_key(|bin| -1 * matcher.fuzzy_match(bin.name(), search).unwrap());
+        //we do a bitwise not because sort() gives smaller values higher positions.
+        bins.sort_by_cached_key(|bin| !matcher.fuzzy_match(bin.name(), search).unwrap());
 
         bins
     }
